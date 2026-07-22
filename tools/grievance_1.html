@@ -113,7 +113,13 @@ button:active{transform:scale(.98)}
         <h2 style="font-size:22px;font-weight:800;color:#111827;letter-spacing:-.02em">Saved Reports</h2>
         <div style="font-size:12px;color:#6b7280;margin-top:3px;font-weight:500">Your private opportunity library</div>
       </div>
-      <button onclick="showView('analyze')" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700">+ New Analysis</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button onclick="exportLibrary()" style="background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:#374151">↓ Export</button>
+        <label style="background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:#374151;cursor:pointer;display:inline-block">↑ Import
+          <input type="file" accept=".json" onchange="importLibrary(event)" style="display:none">
+        </label>
+        <button onclick="showView('analyze')" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700">+ New Analysis</button>
+      </div>
     </div>
     <div id="lib-pinned-section" style="display:none;margin-bottom:32px">
       <div style="font-size:10px;color:#374151;letter-spacing:.14em;text-transform:uppercase;font-family:monospace;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px"><span style="color:#ca8a04">★</span> High Signal</div>
@@ -527,6 +533,44 @@ function saveReport() {
   btn.textContent = '✓ Saved'; btn.style.background = '#f0fdf4'; btn.style.color = '#15803d';
   setTimeout(() => { btn.textContent = '+ Save Report'; btn.style.background = '#fff'; btn.style.color = '#16a34a'; }, 2000);
   document.getElementById('library-btn').style.display = 'block';
+}
+
+// ── Export / Import ────────────────────────────────────────────────────────────
+function exportLibrary() {
+  const lib = getLibrary();
+  if (!lib.length) { alert('No saved reports to export.'); return; }
+  const blob = new Blob([JSON.stringify(lib, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'grievance-library-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importLibrary(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const incoming = JSON.parse(e.target.result);
+      if (!Array.isArray(incoming)) throw new Error('Not a valid library file');
+      const existing = getLibrary();
+      const ids = new Set(existing.map(r => r.id));
+      const qs  = new Set(existing.map(r => r.query.toLowerCase()));
+      let added = 0, skipped = 0;
+      incoming.forEach(r => {
+        if (ids.has(r.id) || qs.has(r.query.toLowerCase())) { skipped++; return; }
+        existing.push(r); added++;
+      });
+      saveLibrary(existing);
+      renderLibrary();
+      document.getElementById('library-btn').style.display = 'block';
+      alert('Import complete — ' + added + ' report' + (added!==1?'s':'') + ' added, ' + skipped + ' duplicate' + (skipped!==1?'s':'') + ' skipped.');
+    } catch(err) { alert('Import failed: ' + err.message); }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function renderLibrary() {
