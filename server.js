@@ -1,6 +1,17 @@
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 const ALLOWED_HEADERS = 'Content-Type, x-api-key, anthropic-version, anthropic-dangerous-direct-browser-calls';
+
+// Served at a stable Railway URL so the browser origin (and therefore
+// localStorage) stays constant no matter how the page is reached — unlike
+// opening the local file, which gets a fresh origin every time Drive's web
+// UI hands out a new .tmp/ copy.
+const STATIC_PAGES = {
+  '/grievance': path.join(__dirname, 'tools', 'grievance_1.html'),
+  '/signal': path.join(__dirname, 'tools', 'SIGNAL — Complaint Intelligence Engine.html')
+};
 
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,6 +27,19 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok');
+    return;
+  }
+
+  if (req.method === 'GET' && STATIC_PAGES[req.url]) {
+    fs.readFile(STATIC_PAGES[req.url], (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('page not found on disk');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(data);
+    });
     return;
   }
 

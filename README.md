@@ -22,16 +22,29 @@ have one; see "Not yet consolidated" below for the piece that doesn't.
   renamed, so don't be surprised the two names no longer match.
 - **`tools/SIGNAL — Complaint Intelligence Engine.html`** and
   **`tools/grievance_1.html`** — the two standalone browser tools (no
-  backend of their own; user pastes their own Anthropic API key, stored in
-  `localStorage` only). Both point their fetch calls at the proxy above, not
-  at `api.anthropic.com` directly (browser calls to Anthropic are CORS-
-  blocked from every origin — confirmed, not a config issue on our end).
+  backend of their own beyond the proxy; user pastes their own Anthropic API
+  key, stored in `localStorage` only). Both point their fetch calls at the
+  proxy above, not at `api.anthropic.com` directly (browser calls to
+  Anthropic are CORS-blocked from every origin — confirmed, not a config
+  issue on our end).
 
-**Copies of the two HTML files still live in Google Drive** at
-`Claude html/Tools/` — that's where Bill actually opens them from day to
-day, so they were copied here, not moved. If you edit either tool, update
-both copies (or ask whether the Drive copy should just become a symlink/
-sync target instead of a second copy that can drift).
+**Use the hosted URLs, not a local file.** As of 2026-07-22 the same
+Railway server also serves both tools directly:
+  - `https://signal-anthropic-proxy-production.up.railway.app/grievance`
+  - `https://signal-anthropic-proxy-production.up.railway.app/signal`
+
+  Bookmark these. `localStorage` (saved reports, API key) is scoped to the
+  exact browser origin/path a page was loaded from — opening the file
+  itself instead (double-click in Finder, or worse, via Drive's web UI,
+  which hands out a fresh throwaway copy under `.tmp/<random-id>/` on every
+  open) puts you on a different origin each time and silently loses
+  everything previously saved. The hosted URL is always the same origin, so
+  this can't happen there.
+
+  Copies of the two HTML files still live in Google Drive at
+  `Claude html/Tools/` and in `tools/` here — those remain the source files
+  the server reads from, and are what to edit. Just don't *open* them
+  directly day-to-day anymore; open the hosted URL instead.
 
 ## Not yet consolidated
 
