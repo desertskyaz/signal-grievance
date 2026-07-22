@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRIEVANCE — Complaint Intelligence Engine</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f3f4f6;font-family:system-ui,-apple-system,sans-serif;color:#111827;min-height:100vh;padding-bottom:80px}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.blink{animation:blink 1.1s step-end infinite}
+textarea{color:#111827!important}
+textarea::placeholder{color:#9ca3af}
+button{cursor:pointer;transition:opacity .2s}
+button:hover{opacity:.88}
+button:active{transform:scale(.98)}
+.deepdive-panel{border-top:2px dashed #d1d5db;margin-top:16px;padding-top:16px;display:none}
+.deepdive-panel.open{display:block;animation:slideUp .3s ease-out}
+</style>
+</head>
+<body>
+
+<div style="border-bottom:1.5px solid #d1d5db;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:100">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:30px;height:30px;background:#16a34a;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:800">G</div>
+    <div>
+      <div style="font-size:14px;font-weight:800;letter-spacing:-.02em;color:#111827">GRIEVANCE</div>
+      <div style="font-size:10px;color:#374151;letter-spacing:.12em;font-family:monospace;text-transform:uppercase;font-weight:600">Complaint Intelligence Engine</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button id="library-btn" onclick="showView('library')" style="background:#f9fafb;border:1.5px solid #d1d5db;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;color:#374151;font-family:monospace;display:none">📁 Library</button>
+    <button onclick="showKeyBanner()" style="background:#f9fafb;border:1.5px solid #d1d5db;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;color:#374151;font-family:monospace" id="key-toggle-btn">🔑 API Key</button>
+    <div id="status-badge" style="font-family:monospace;font-size:10px;color:#374151;letter-spacing:.1em;font-weight:700">READY</div>
+  </div>
+</div>
+
+<div id="key-banner" style="background:#fffbeb;border-bottom:1.5px solid #fcd34d;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <div style="font-size:12px;color:#92400e;font-weight:700;font-family:monospace;flex-shrink:0">🔑 Anthropic API Key</div>
+  <input id="key-input" type="password" placeholder="sk-ant-..." style="flex:1;min-width:240px;border:1.5px solid #fcd34d;border-radius:7px;padding:7px 12px;font-size:13px;background:#fff;color:#111827;outline:none;font-family:monospace">
+  <button onclick="saveKey()" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:12px;font-weight:700">Save Key</button>
+  <button onclick="hideKeyBanner()" style="background:none;border:none;color:#92400e;font-size:18px;line-height:1;padding:0 4px">✕</button>
+  <div style="width:100%;font-size:11px;color:#92400e;font-weight:500;line-height:1.7">
+    Get a key at <strong style="font-family:monospace;background:#fef3c7;padding:1px 6px;border-radius:4px">console.anthropic.com</strong> → Settings → API Keys. Stored only in this browser's localStorage.
+  </div>
+</div>
+<div id="no-key-warning" style="display:none;background:#fef2f2;border-bottom:1.5px solid #fca5a5;padding:12px 24px;font-size:12px;color:#991b1b;font-weight:700;font-family:monospace">
+  ⚠ No API key set — click 🔑 API Key in the header to add yours before running an analysis.
+</div>
+
+<div style="max-width:800px;margin:0 auto;padding:36px 20px 0">
+
+  <!-- ANALYZE VIEW -->
+  <div id="view-analyze">
+    <div id="hero" style="margin-bottom:36px">
+      <div style="font-size:10px;letter-spacing:.18em;color:#374151;font-family:monospace;margin-bottom:12px;text-transform:uppercase;font-weight:700">Millions of users describe exactly what they hate — every day.</div>
+      <h1 style="font-size:clamp(26px,4.5vw,44px);font-weight:800;line-height:1.1;letter-spacing:-.03em;color:#111827;margin-bottom:12px">Turn complaints<br><span style="color:#16a34a">into companies.</span></h1>
+      <p style="font-size:14px;color:#1f2937;line-height:1.7;max-width:460px;font-weight:500">Enter any product category. GRIEVANCE extracts the gaps nobody has solved — then generates the startup opportunities hiding inside them.</p>
+    </div>
+
+    <div id="input-box" style="background:#fff;border:1.5px solid #d1d5db;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07);transition:border-color .3s">
+      <div style="font-size:10px;color:#374151;letter-spacing:.14em;text-transform:uppercase;font-family:monospace;margin-bottom:10px;font-weight:700">◈ Analyze category</div>
+      <textarea id="query-input" placeholder='e.g. "project management software" or "senior independence assistance"' rows="2" style="width:100%;background:transparent;border:none;font-size:15px;font-family:inherit;resize:none;line-height:1.5;outline:none;font-weight:500"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <span style="font-size:10px;color:#6b7280;font-family:monospace;font-weight:600">⌘+Enter to run</span>
+        <button id="run-btn" onclick="runAnalysis()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;letter-spacing:-.01em">Mine Complaints →</button>
+      </div>
+    </div>
+
+    <div id="chips" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:32px">
+      <span style="font-size:10px;color:#374151;font-family:monospace;align-self:center;margin-right:4px;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Try:</span>
+    </div>
+
+    <div id="loading-state" style="display:none;margin-bottom:28px">
+      <div id="source-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px"></div>
+      <div style="background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;animation:pulse 1.2s ease-in-out infinite"></span>
+          <span id="phase-label" style="font-size:12px;color:#16a34a;font-family:monospace;font-weight:700"></span><span class="blink" style="color:#16a34a;font-family:monospace;font-size:12px">_</span>
+        </div>
+        <div style="display:flex;gap:5px">
+          <div class="pb" style="height:3px;flex:1;border-radius:2px;background:#e5e7eb;transition:background .5s"></div>
+          <div class="pb" style="height:3px;flex:1;border-radius:2px;background:#e5e7eb;transition:background .5s"></div>
+          <div class="pb" style="height:3px;flex:1;border-radius:2px;background:#e5e7eb;transition:background .5s"></div>
+          <div class="pb" style="height:3px;flex:1;border-radius:2px;background:#e5e7eb;transition:background .5s"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="error-box" style="display:none;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:14px 18px;margin-bottom:20px;color:#991b1b;font-size:13px;font-family:monospace;font-weight:700"></div>
+    <div id="terminal" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:14px 18px;margin-bottom:24px"></div>
+
+    <div id="results" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="display:flex;gap:2px;background:#e5e7eb;padding:4px;border-radius:10px">
+          <button id="tab-gaps" onclick="switchTab('gaps')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:12px;font-weight:700">Frustration Gaps</button>
+          <button id="tab-startups" onclick="switchTab('startups')" style="background:transparent;color:#374151;border:none;border-radius:7px;padding:8px 18px;font-size:12px;font-weight:700">Startup Briefs</button>
+        </div>
+        <button onclick="saveReport()" style="background:#fff;border:1.5px solid #16a34a;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:#16a34a">+ Save Report</button>
+      </div>
+      <div id="gaps-panel"></div>
+      <div id="startups-panel" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- LIBRARY VIEW -->
+  <div id="view-library" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px">
+      <div>
+        <h2 style="font-size:22px;font-weight:800;color:#111827;letter-spacing:-.02em">Saved Reports</h2>
+        <div style="font-size:12px;color:#6b7280;margin-top:3px;font-weight:500">Your private opportunity library</div>
+      </div>
+      <button onclick="showView('analyze')" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700">+ New Analysis</button>
+    </div>
+    <div id="lib-pinned-section" style="display:none;margin-bottom:32px">
+      <div style="font-size:10px;color:#374151;letter-spacing:.14em;text-transform:uppercase;font-family:monospace;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px"><span style="color:#ca8a04">★</span> High Signal</div>
+      <div id="lib-pinned"></div>
+    </div>
+    <div id="lib-all-section">
+      <div style="font-size:10px;color:#374151;letter-spacing:.14em;text-transform:uppercase;font-family:monospace;font-weight:700;margin-bottom:12px">All Reports</div>
+      <div id="lib-all"></div>
+    </div>
+    <div id="lib-empty" style="display:none;text-align:center;padding:60px 20px">
+      <div style="font-size:32px;margin-bottom:12px">📭</div>
+      <div style="font-size:15px;font-weight:700;color:#374151;margin-bottom:6px">No saved reports yet</div>
+      <div style="font-size:13px;color:#6b7280">Run an analysis and hit "Save Report" to build your library.</div>
+    </div>
+  </div>
+
+  <!-- REPORT DETAIL VIEW -->
+  <div id="view-report" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+      <div>
+        <button onclick="showView('library')" style="background:none;border:none;color:#6b7280;font-size:12px;font-weight:700;padding:0;margin-bottom:8px;display:flex;align-items:center;gap:4px">← Back to Library</button>
+        <h2 id="report-title" style="font-size:22px;font-weight:800;color:#111827;letter-spacing:-.02em"></h2>
+        <div id="report-meta" style="font-size:12px;color:#6b7280;margin-top:4px;font-weight:500"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="pin-btn" onclick="togglePin()" style="background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:#374151">☆ Pin</button>
+        <button onclick="deleteReport()" style="background:#fff;border:1.5px solid #fca5a5;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:#dc2626">Delete</button>
+      </div>
+    </div>
+    <div id="report-summary" style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#14532d;line-height:1.6;font-weight:600"></div>
+    <div style="display:flex;gap:2px;margin-bottom:20px;background:#e5e7eb;padding:4px;border-radius:10px;width:fit-content">
+      <button id="rtab-gaps" onclick="switchReportTab('gaps')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:12px;font-weight:700">Frustration Gaps</button>
+      <button id="rtab-startups" onclick="switchReportTab('startups')" style="background:transparent;color:#374151;border:none;border-radius:7px;padding:8px 18px;font-size:12px;font-weight:700">Startup Briefs</button>
+    </div>
+    <div id="report-gaps-panel"></div>
+    <div id="report-startups-panel" style="display:none"></div>
+  </div>
+
+</div>
+
+<script>
+const CHIPS = ["project management","meal planning","freelancer accounting","note-taking apps","HR software","dating apps","fitness tracking","senior independence","travel booking"];
+const SOURCES = ["Reddit","App Store","Google Reviews","Amazon Reviews","Discord","X / Twitter","Support Forums","SaaS Communities"];
+const PHASES = ["Scanning complaint sources","Extracting frustration clusters","Mapping market gaps","Generating opportunity briefs"];
+
+let phaseInterval, sourceInterval, currentPhase = 0;
+let currentData = null, currentQuery = null, currentReportId = null;
+
+// ── API Key ───────────────────────────────────────────────────────────────────
+function getKey() { return localStorage.getItem('grievance_api_key') || ''; }
+function saveKey() {
+  const k = document.getElementById('key-input').value.trim();
+  if (!k) { alert('Please paste your API key first.'); return; }
+  localStorage.setItem('grievance_api_key', k);
+  hideKeyBanner();
+  document.getElementById('no-key-warning').style.display = 'none';
+  document.getElementById('status-badge').innerHTML = '<span style="color:#16a34a;font-weight:700">KEY SET</span>';
+  setTimeout(() => { document.getElementById('status-badge').textContent = 'READY'; }, 2000);
+}
+function showKeyBanner() {
+  const b = document.getElementById('key-banner');
+  b.style.display = 'flex';
+  const k = getKey();
+  if (k) document.getElementById('key-input').value = k;
+  document.getElementById('key-input').focus();
+}
+function hideKeyBanner() { document.getElementById('key-banner').style.display = 'none'; }
+
+// ── Storage ──────────────────────────────────────────────────────────────────
+function getLibrary() {
+  try { return JSON.parse(localStorage.getItem('grievance_lib') || '[]'); } catch { return []; }
+}
+function saveLibrary(lib) { localStorage.setItem('grievance_lib', JSON.stringify(lib)); }
+
+// ── View routing ─────────────────────────────────────────────────────────────
+function showView(v) {
+  document.getElementById('view-analyze').style.display = v === 'analyze' ? 'block' : 'none';
+  document.getElementById('view-library').style.display = v === 'library' ? 'block' : 'none';
+  document.getElementById('view-report').style.display  = v === 'report'  ? 'block' : 'none';
+  if (v === 'library') renderLibrary();
+}
+
+// ── Chips ─────────────────────────────────────────────────────────────────────
+const chipsEl = document.getElementById('chips');
+CHIPS.forEach(c => {
+  const btn = document.createElement('button');
+  btn.textContent = c;
+  btn.style.cssText = 'background:#fff;border:1.5px solid #d1d5db;color:#374151;border-radius:20px;padding:5px 13px;font-size:11px;font-family:monospace;font-weight:700;transition:all .15s';
+  btn.onmouseover = () => { btn.style.borderColor='#16a34a'; btn.style.color='#16a34a'; };
+  btn.onmouseout  = () => { btn.style.borderColor='#d1d5db'; btn.style.color='#374151'; };
+  btn.onclick = () => { document.getElementById('query-input').value = c; };
+  chipsEl.appendChild(btn);
+});
+document.getElementById('query-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) runAnalysis();
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('gaps-panel').style.display = tab === 'gaps' ? 'block' : 'none';
+  document.getElementById('startups-panel').style.display = tab === 'startups' ? 'block' : 'none';
+  const g = document.getElementById('tab-gaps'), s = document.getElementById('tab-startups');
+  if (tab === 'gaps') { g.style.background='#16a34a'; g.style.color='#fff'; s.style.background='transparent'; s.style.color='#374151'; }
+  else { s.style.background='#16a34a'; s.style.color='#fff'; g.style.background='transparent'; g.style.color='#374151'; }
+}
+function switchReportTab(tab) {
+  document.getElementById('report-gaps-panel').style.display = tab === 'gaps' ? 'block' : 'none';
+  document.getElementById('report-startups-panel').style.display = tab === 'startups' ? 'block' : 'none';
+  const g = document.getElementById('rtab-gaps'), s = document.getElementById('rtab-startups');
+  if (tab === 'gaps') { g.style.background='#16a34a'; g.style.color='#fff'; s.style.background='transparent'; s.style.color='#374151'; }
+  else { s.style.background='#16a34a'; s.style.color='#fff'; g.style.background='transparent'; g.style.color='#374151'; }
+}
+
+// ── Loading animation ─────────────────────────────────────────────────────────
+function startLoading() {
+  currentPhase = 0;
+  document.getElementById('loading-state').style.display = 'block';
+  document.getElementById('status-badge').innerHTML = '<span style="color:#16a34a;font-weight:700">● SCANNING</span>';
+  document.getElementById('input-box').style.borderColor = '#86efac';
+  document.getElementById('run-btn').style.opacity = '0.4';
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('error-box').style.display = 'none';
+  document.getElementById('terminal').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('hero').style.display = 'none';
+  document.getElementById('chips').style.display = 'none';
+
+  const grid = document.getElementById('source-grid');
+  grid.innerHTML = '';
+  const srcEls = {};
+  SOURCES.forEach(src => {
+    const el = document.createElement('div');
+    el.style.cssText = 'background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 12px;transition:all .3s;box-shadow:0 1px 3px rgba(0,0,0,.04)';
+    el.innerHTML = `<div style="font-size:11px;color:#374151;font-family:monospace;font-weight:700;transition:color .3s">${src}</div>`;
+    grid.appendChild(el);
+    srcEls[src] = el;
+  });
+  let si = 0;
+  sourceInterval = setInterval(() => {
+    if (si < SOURCES.length) {
+      const src = SOURCES[si];
+      srcEls[src].style.background = '#f0fdf4'; srcEls[src].style.borderColor = '#86efac';
+      srcEls[src].firstChild.style.color = '#15803d';
+      srcEls[src].firstChild.textContent = '✓ ' + src;
+      si++;
+    }
+  }, 350);
+  const bars = document.querySelectorAll('.pb');
+  const phLabel = document.getElementById('phase-label');
+  phLabel.textContent = PHASES[0];
+  phaseInterval = setInterval(() => {
+    currentPhase = Math.min(currentPhase + 1, PHASES.length - 1);
+    phLabel.textContent = PHASES[currentPhase];
+    bars.forEach((b, i) => { b.style.background = i < currentPhase ? '#16a34a' : i === currentPhase ? '#86efac' : '#e5e7eb'; });
+  }, 2000);
+}
+
+function stopLoading() {
+  clearInterval(phaseInterval); clearInterval(sourceInterval);
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('input-box').style.borderColor = '#d1d5db';
+  document.getElementById('run-btn').style.opacity = '1';
+  document.getElementById('run-btn').disabled = false;
+}
+
+// ── Structured output schemas ────────────────────────────────────────────────
+const ANALYSIS_TOOL = {
+  name: 'submit_gaps_and_startups',
+  description: 'Submit the frustration gap analysis and startup opportunity briefs.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      summary: { type: 'string' },
+      totalComplaints: { type: 'number' },
+      gaps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            intensity: { type: 'integer' },
+            frequency: { type: 'string' },
+            workaround: { type: 'string' },
+            market: { type: 'string' },
+            opportunity: { type: 'string' },
+            verbatim: { type: 'string' }
+          },
+          required: ['title', 'description', 'intensity', 'frequency', 'workaround', 'market', 'opportunity', 'verbatim']
+        }
+      },
+      startups: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            tagline: { type: 'string' },
+            model: { type: 'string' },
+            pricing: { type: 'string' },
+            tam: { type: 'string' },
+            mvp: { type: 'array', items: { type: 'string' } },
+            marketing: { type: 'string' },
+            moat: { type: 'string' }
+          },
+          required: ['name', 'tagline', 'model', 'pricing', 'tam', 'mvp', 'marketing', 'moat']
+        }
+      }
+    },
+    required: ['summary', 'totalComplaints', 'gaps', 'startups']
+  }
+};
+
+const DEEPDIVE_TOOL = {
+  name: 'submit_deep_dive_insights',
+  description: 'Submit the deep-dive hidden opportunity insights.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      insights: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            angle: { type: 'string' },
+            why_missed: { type: 'string' },
+            opportunity: { type: 'string' },
+            who: { type: 'string' },
+            revenue_model: { type: 'string' },
+            first_move: { type: 'string' }
+          },
+          required: ['title', 'angle', 'why_missed', 'opportunity', 'who', 'revenue_model', 'first_move']
+        }
+      }
+    },
+    required: ['insights']
+  }
+};
+
+// ── Main analysis ─────────────────────────────────────────────────────────────
+async function runAnalysis() {
+  const q = document.getElementById('query-input').value.trim();
+  if (!q) return;
+  if (!getKey()) { showKeyBanner(); return; }
+  currentQuery = q;
+  startLoading();
+
+  const prompt = `Mine complaints for "${q}". Return ONLY valid JSON, no markdown, matching this exact schema:
+{"summary":"string","totalComplaints":number,"gaps":[{"title":"string","description":"string","intensity":number,"frequency":"string","workaround":"string","market":"string","opportunity":"string","verbatim":"string"}],"startups":[{"name":"string","tagline":"string","model":"string","pricing":"string","tam":"string","mvp":["string","string","string"],"marketing":"string","moat":"string"}]}
+Exactly 5 gaps, 3 startups. intensity = integer 1-10. frequency = e.g. "12,400 mentions". All strings concise (1-2 sentences max). verbatim reads like a real frustrated user. Gaps specific to "${q}".
+
+IMPORTANT: Always consider benefit underutilization as a gap type — federal, state, county, city programs, senior centers, Area Agency on Aging, Veterans benefits, utility assistance, housing programs that the target population qualifies for but cannot find, navigate, or access. This is often the highest-intensity gap that first-pass analyses miss entirely.`;
+
+  try {
+    const res = await fetch('https://signal-anthropic-proxy-production.up.railway.app/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': getKey(), 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-5',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }],
+        tools: [ANALYSIS_TOOL],
+        tool_choice: { type: 'tool', name: ANALYSIS_TOOL.name }
+      })
+    });
+    stopLoading();
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    const toolUse = (data.content||[]).find(b => b.type==='tool_use');
+    if (!toolUse) throw new Error('No structured response from model');
+    currentData = toolUse.input;
+    renderResults(currentData);
+    if (getLibrary().length > 0) document.getElementById('library-btn').style.display = 'block';
+  } catch(e) {
+    stopLoading();
+    const eb = document.getElementById('error-box');
+    eb.style.display = 'block'; eb.textContent = '✕ ' + e.message;
+    document.getElementById('status-badge').innerHTML = '<span style="color:#991b1b;font-weight:700">ERROR</span>';
+    document.getElementById('hero').style.display = 'block';
+    document.getElementById('chips').style.display = 'flex';
+  }
+}
+
+// ── Deep Dive ─────────────────────────────────────────────────────────────────
+async function runDeepDive(gapTitle, gapDescription, panelId, btnEl) {
+  const panel = document.getElementById(panelId);
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    panel.style.display = 'none';
+    btnEl.textContent = '🔍 Deep Dive';
+    btnEl.style.background = '#fff';
+    btnEl.style.color = '#374151';
+    btnEl.style.borderColor = '#d1d5db';
+    return;
+  }
+
+  btnEl.textContent = '⟳ Diving deeper...';
+  btnEl.style.background = '#f0fdf4';
+  btnEl.style.color = '#15803d';
+  btnEl.style.borderColor = '#86efac';
+  btnEl.disabled = true;
+
+  const prompt = `You are a startup opportunity analyst doing a deep dive on a specific frustration gap.
+
+PARENT CATEGORY: "${currentQuery}"
+GAP TITLE: "${gapTitle}"
+GAP SUMMARY: "${gapDescription}"
+
+Go beyond the surface. Identify 3 adjacent or hidden opportunities WITHIN this gap that a first-pass analysis would miss.
+
+CRITICAL LENSES TO ALWAYS CONSIDER — check each one before settling on your 3:
+- Government / public benefit underutilization: Are there federal, state, county, city, or local programs (Medicare, Medicaid, SNAP, housing, transportation, utility assistance, senior center programs, Area Agency on Aging services, Veterans benefits, Social Security auxiliary benefits) that the target population qualifies for but does not know about, cannot navigate, or is too proud/confused to claim? The gap is awareness + navigation, not the benefit itself.
+- Nonprofit / foundation funding angles: Is there an existing grant-funded infrastructure that a product could plug into rather than charging end users?
+- Overlooked subgroups: Who within this gap is the most underserved and least represented in the data?
+- Behavioral / emotional barriers: What stops people from seeking help even when it exists?
+- Distribution channels nobody is using: Senior centers, faith communities, pharmacies, primary care offices, utility companies, county social workers.
+
+Return ONLY valid JSON, no markdown:
+{"insights":[{"title":"string","angle":"string","why_missed":"string","opportunity":"string","who":"string","revenue_model":"string","first_move":"string"}]}
+
+Exactly 3 insights. Be specific and non-obvious. Think like someone who has lived this problem.`;
+
+  try {
+    const res = await fetch('https://signal-anthropic-proxy-production.up.railway.app/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': getKey(), 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-5',
+        max_tokens: 4500,
+        messages: [{ role: 'user', content: prompt }],
+        tools: [DEEPDIVE_TOOL],
+        tool_choice: { type: 'tool', name: DEEPDIVE_TOOL.name }
+      })
+    });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const data = await res.json();
+    const toolUse = (data.content||[]).find(b => b.type==='tool_use');
+    if (!toolUse) throw new Error('No structured response from model');
+    const parsed = toolUse.input;
+
+    panel.innerHTML = '';
+    const header = document.createElement('div');
+    header.style.cssText = 'font-size:10px;color:#374151;letter-spacing:.14em;text-transform:uppercase;font-family:monospace;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px';
+    header.innerHTML = '<span style="color:#16a34a">🔍</span> Deep Dive — Hidden Opportunities Within This Gap';
+    panel.appendChild(header);
+
+    (parsed.insights || []).forEach((ins, i) => {
+      const card = document.createElement('div');
+      card.style.cssText = `background:#fff;border:1.5px solid #e5e7eb;border-left:3px solid #16a34a;border-radius:8px;padding:16px 18px;margin-bottom:10px;animation:slideUp .3s ease-out ${i*80}ms both`;
+      card.innerHTML = `
+        <div style="font-size:14px;font-weight:800;color:#111827;margin-bottom:6px;letter-spacing:-.01em">${ins.title}</div>
+        <div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:10px;font-family:monospace;font-weight:700;padding:2px 10px;border-radius:20px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.08em">${ins.angle}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:6px;padding:10px 12px">
+            <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;font-family:monospace;font-weight:700">Why it's missed</div>
+            <div style="font-size:12px;color:#1f2937;line-height:1.5;font-weight:500">${ins.why_missed}</div>
+          </div>
+          <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:6px;padding:10px 12px">
+            <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;font-family:monospace;font-weight:700">Target user</div>
+            <div style="font-size:12px;color:#1f2937;line-height:1.5;font-weight:500">${ins.who}</div>
+          </div>
+        </div>
+        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:6px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;font-family:monospace;font-weight:700">The opportunity</div>
+          <div style="font-size:13px;color:#14532d;line-height:1.6;font-weight:700">${ins.opportunity}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:6px;padding:10px 12px">
+            <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;font-family:monospace;font-weight:700">Revenue model</div>
+            <div style="font-size:12px;color:#1f2937;line-height:1.5;font-weight:500">${ins.revenue_model}</div>
+          </div>
+          <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:6px;padding:10px 12px">
+            <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;font-family:monospace;font-weight:700">First move</div>
+            <div style="font-size:12px;color:#1f2937;line-height:1.5;font-weight:500">${ins.first_move}</div>
+          </div>
+        </div>
+      `;
+      panel.appendChild(card);
+    });
+
+    panel.classList.add('open');
+    btnEl.textContent = '▲ Close Deep Dive';
+    btnEl.style.background = '#f0fdf4';
+    btnEl.style.color = '#15803d';
+    btnEl.style.borderColor = '#86efac';
+    btnEl.disabled = false;
+  } catch(e) {
+    panel.innerHTML = `<div style="color:#991b1b;font-size:12px;font-family:monospace;font-weight:700">✕ ${e.message}</div>`;
+    panel.classList.add('open');
+    btnEl.textContent = '🔍 Deep Dive';
+    btnEl.style.background = '#fff';
+    btnEl.style.color = '#374151';
+    btnEl.style.borderColor = '#d1d5db';
+    btnEl.disabled = false;
+  }
+}
+
+// ── Save / Library ────────────────────────────────────────────────────────────
+function saveReport() {
+  if (!currentData || !currentQuery) return;
+  const lib = getLibrary();
+  const existing = lib.find(r => r.query.toLowerCase() === currentQuery.toLowerCase());
+  if (existing) { alert('A report for "' + currentQuery + '" is already saved.'); return; }
+  const topGaps = [...(currentData.gaps||[])].sort((a,b) => b.intensity - a.intensity).slice(0,3);
+  const avgIntensity = topGaps.reduce((s,g) => s + g.intensity, 0) / (topGaps.length || 1);
+  const entry = { id: Date.now(), query: currentQuery, data: currentData, savedAt: new Date().toISOString(), pinned: false, signalScore: Math.round(avgIntensity * 10) / 10 };
+  lib.unshift(entry);
+  saveLibrary(lib);
+  const btn = document.querySelector('button[onclick="saveReport()"]');
+  btn.textContent = '✓ Saved'; btn.style.background = '#f0fdf4'; btn.style.color = '#15803d';
+  setTimeout(() => { btn.textContent = '+ Save Report'; btn.style.background = '#fff'; btn.style.color = '#16a34a'; }, 2000);
+  document.getElementById('library-btn').style.display = 'block';
+}
+
+function renderLibrary() {
+  const lib = getLibrary();
+  const pinned = lib.filter(r => r.pinned);
+  document.getElementById('lib-empty').style.display = lib.length === 0 ? 'block' : 'none';
+  document.getElementById('lib-all-section').style.display = lib.length === 0 ? 'none' : 'block';
+  document.getElementById('lib-pinned-section').style.display = pinned.length > 0 ? 'block' : 'none';
+  document.getElementById('lib-pinned').innerHTML = '';
+  pinned.forEach(r => document.getElementById('lib-pinned').appendChild(makeLibCard(r)));
+  const sorted = [...lib].sort((a,b) => b.signalScore - a.signalScore);
+  document.getElementById('lib-all').innerHTML = '';
+  sorted.forEach(r => document.getElementById('lib-all').appendChild(makeLibCard(r)));
+}
+
+function makeLibCard(r) {
+  const el = document.createElement('div');
+  const topGap = [...(r.data.gaps||[])].sort((a,b) => b.intensity - a.intensity)[0];
+  const date = new Date(r.savedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const sc = r.signalScore;
+  const scoreColor = sc >= 8 ? '#dc2626' : sc >= 6 ? '#ea580c' : '#ca8a04';
+  const scoreBg   = sc >= 8 ? '#fef2f2' : sc >= 6 ? '#fff7ed' : '#fefce8';
+  el.style.cssText = 'background:#fff;border:1.5px solid #d1d5db;border-radius:10px;padding:18px 20px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer;transition:border-color .2s';
+  el.onmouseover = () => el.style.borderColor = '#16a34a';
+  el.onmouseout  = () => el.style.borderColor = '#d1d5db';
+  el.onclick = () => openReport(r.id);
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#111827;letter-spacing:-.01em">${r.query}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px;font-family:monospace;font-weight:600">${date} · ${r.data.gaps?.length||0} gaps · ${r.data.startups?.length||0} briefs</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${r.pinned ? '<span style="font-size:13px;color:#ca8a04">★</span>' : ''}
+        <span style="background:${scoreBg};border:1px solid ${scoreColor}44;color:${scoreColor};font-size:11px;padding:2px 10px;border-radius:20px;font-family:monospace;font-weight:700">signal ${r.signalScore}/10</span>
+      </div>
+    </div>
+    ${topGap ? `<div style="font-size:12px;color:#374151;font-weight:600;line-height:1.5">Top gap: <span style="color:#111827">${topGap.title}</span> — ${topGap.description?.split('.')[0]}.</div>` : ''}
+  `;
+  return el;
+}
+
+function openReport(id) {
+  const lib = getLibrary();
+  const r = lib.find(x => x.id === id);
+  if (!r) return;
+  currentReportId = id;
+  currentQuery = r.query;
+  currentData = r.data;
+  document.getElementById('report-title').textContent = r.query;
+  const date = new Date(r.savedAt).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+  document.getElementById('report-meta').textContent = `Saved ${date} · Signal score ${r.signalScore}/10 · ${r.data.totalComplaints?.toLocaleString()||'~18,000'} complaints analyzed`;
+  document.getElementById('report-summary').textContent = r.data.summary || '';
+  const pinBtn = document.getElementById('pin-btn');
+  pinBtn.textContent = r.pinned ? '★ Pinned' : '☆ Pin';
+  pinBtn.style.color = r.pinned ? '#ca8a04' : '#374151';
+  pinBtn.style.borderColor = r.pinned ? '#fbbf24' : '#d1d5db';
+  renderGapCards(r.data.gaps || [], 'report-gaps-panel');
+  renderStartupCards(r.data.startups || [], 'report-startups-panel');
+  switchReportTab('gaps');
+  document.getElementById('rtab-gaps').textContent = `Frustration Gaps (${(r.data.gaps||[]).length})`;
+  document.getElementById('rtab-startups').textContent = `Startup Briefs (${(r.data.startups||[]).length})`;
+  showView('report');
+}
+
+function togglePin() {
+  const lib = getLibrary();
+  const r = lib.find(x => x.id === currentReportId);
+  if (!r) return;
+  r.pinned = !r.pinned;
+  saveLibrary(lib);
+  openReport(currentReportId);
+}
+
+function deleteReport() {
+  if (!confirm('Delete this report?')) return;
+  const lib = getLibrary().filter(x => x.id !== currentReportId);
+  saveLibrary(lib);
+  if (lib.length === 0) document.getElementById('library-btn').style.display = 'none';
+  showView('library');
+}
+
+// ── Render cards ──────────────────────────────────────────────────────────────
+function renderResults(data) {
+  document.getElementById('status-badge').innerHTML = '<span style="color:#16a34a;font-weight:700">● COMPLETE</span>';
+  const term = document.getElementById('terminal');
+  term.style.display = 'block'; term.innerHTML = '';
+  const lines = [
+    `> complaints analyzed: ${(data.totalComplaints||18400).toLocaleString()}`,
+    `> frustration clusters: ${(data.gaps||[]).length}`,
+    `> opportunities generated: ${(data.startups||[]).length}`,
+    `> ${data.summary}`
+  ];
+  lines.forEach((line, i) => {
+    setTimeout(() => {
+      const d = document.createElement('div');
+      d.style.cssText = `font-family:monospace;font-size:12px;font-weight:700;color:${i===lines.length-1?'#1f2937':'#15803d'};line-height:1.9;animation:slideUp .3s ease-out`;
+      d.textContent = line; term.appendChild(d);
+    }, i * 160);
+  });
+  renderGapCards(data.gaps || [], 'gaps-panel');
+  renderStartupCards(data.startups || [], 'startups-panel');
+  document.getElementById('tab-gaps').textContent = `Frustration Gaps (${(data.gaps||[]).length})`;
+  document.getElementById('tab-startups').textContent = `Startup Briefs (${(data.startups||[]).length})`;
+  switchTab('gaps');
+  document.getElementById('results').style.display = 'block';
+}
+
+function renderGapCards(gaps, panelId) {
+  const panel = document.getElementById(panelId);
+  panel.innerHTML = '';
+  gaps.forEach((g, i) => {
+    const col   = g.intensity >= 8 ? '#dc2626' : g.intensity >= 6 ? '#ea580c' : '#ca8a04';
+    const bgcol = g.intensity >= 8 ? '#fef2f2' : g.intensity >= 6 ? '#fff7ed' : '#fefce8';
+    const ddPanelId = `dd-${panelId}-${i}`;
+    const ddBtnId   = `ddbtn-${panelId}-${i}`;
+    const el = document.createElement('div');
+    el.style.cssText = `background:#fff;border:1.5px solid #d1d5db;border-left:4px solid ${col};border-radius:8px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.07);animation:slideUp .4s ease-out ${i*80}ms both`;
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div style="font-family:monospace;font-size:10px;color:#374151;letter-spacing:.12em;text-transform:uppercase;font-weight:700">GAP_${String(i+1).padStart(2,'0')}</div>
+        <div style="display:flex;gap:7px">
+          <span style="background:${bgcol};border:1px solid ${col}66;color:${col};font-size:11px;padding:2px 10px;border-radius:20px;font-family:monospace;font-weight:700">⚡ ${g.intensity}/10</span>
+          <span style="background:#f3f4f6;border:1px solid #d1d5db;color:#374151;font-size:11px;padding:2px 10px;border-radius:20px;font-family:monospace;font-weight:700">${g.frequency}</span>
+        </div>
+      </div>
+      <div style="font-size:16px;font-weight:800;color:#111827;margin-bottom:9px;line-height:1.3;letter-spacing:-.01em">${g.title}</div>
+      <div style="font-size:13px;color:#1f2937;line-height:1.7;margin-bottom:16px;font-weight:500">${g.description}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:11px 13px">
+          <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;font-family:monospace;font-weight:700">Current workaround</div>
+          <div style="font-size:12px;color:#1f2937;line-height:1.5;font-weight:600">${g.workaround}</div>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:11px 13px">
+          <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;font-family:monospace;font-weight:700">Market signal</div>
+          <div style="font-size:12px;color:#14532d;line-height:1.5;font-weight:700">${g.market}</div>
+        </div>
+      </div>
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:6px;padding:13px 15px;margin-bottom:12px">
+        <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;font-family:monospace;font-weight:700">Opportunity brief</div>
+        <div style="font-size:13px;color:#14532d;line-height:1.6;font-weight:700">${g.opportunity}</div>
+      </div>
+      ${g.verbatim ? `<div style="padding-top:12px;border-top:1px solid #e5e7eb;margin-bottom:14px"><div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;font-family:monospace;font-weight:700">Representative complaint</div><div style="font-size:12px;color:#374151;font-style:italic;line-height:1.6;border-left:3px solid #d1d5db;padding-left:12px;font-weight:600">"${g.verbatim}"</div></div>` : '<div style="margin-bottom:14px"></div>'}
+      <button id="${ddBtnId}" style="background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;color:#374151;width:100%;text-align:center;transition:all .2s">🔍 Deep Dive — find what this gap is hiding</button>
+      <div id="${ddPanelId}" class="deepdive-panel"></div>
+    `;
+    panel.appendChild(el);
+
+    // Wire up deep dive button after DOM insertion
+    const btn = document.getElementById(ddBtnId);
+    btn.onclick = () => runDeepDive(g.title, g.description, ddPanelId, btn);
+  });
+}
+
+function renderStartupCards(startups, panelId) {
+  const panel = document.getElementById(panelId);
+  panel.innerHTML = '';
+  startups.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.style.cssText = `background:#fff;border:1.5px solid #d1d5db;border-top:3px solid #16a34a;border-radius:8px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.07);animation:slideUp .4s ease-out ${i*80}ms both`;
+    el.innerHTML = `
+      <div style="font-size:17px;font-weight:800;color:#15803d;margin-bottom:4px;letter-spacing:-.02em">${s.name}</div>
+      <div style="font-size:13px;color:#374151;margin-bottom:16px;font-style:italic;font-weight:600">${s.tagline}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:16px">
+        ${[['Model',s.model],['Pricing',s.pricing],['TAM',s.tam]].map(([l,v])=>`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px"><div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;font-family:monospace;font-weight:700">${l}</div><div style="font-size:12px;color:#111827;line-height:1.4;font-weight:700">${v}</div></div>`).join('')}
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;font-family:monospace;font-weight:700">MVP features</div>
+        ${(s.mvp||[]).map(f=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px"><span style="color:#16a34a;font-size:11px;margin-top:3px;flex-shrink:0;font-weight:700">▸</span><span style="font-size:13px;color:#1f2937;line-height:1.5;font-weight:600">${f}</span></div>`).join('')}
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;font-family:monospace;font-weight:700">Marketing angle</div>
+        <div style="font-size:13px;color:#1f2937;line-height:1.6;font-weight:600">${s.marketing}</div>
+      </div>
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:6px;padding:13px 15px">
+        <div style="font-size:10px;color:#374151;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;font-family:monospace;font-weight:700">Competitive moat</div>
+        <div style="font-size:13px;color:#14532d;line-height:1.6;font-weight:700">${s.moat}</div>
+      </div>
+    `;
+    panel.appendChild(el);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if (getKey()) {
+  document.getElementById('key-banner').style.display = 'none';
+  document.getElementById('key-toggle-btn').style.color = '#16a34a';
+} else {
+  document.getElementById('no-key-warning').style.display = 'block';
+  showKeyBanner();
+}
+if (getLibrary().length > 0) document.getElementById('library-btn').style.display = 'block';
+</script>
+</body>
+</html>
